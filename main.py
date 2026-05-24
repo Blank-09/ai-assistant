@@ -1,28 +1,27 @@
 """Voice Assistant — Entry point.
 
-A real-time voice chat application powered by local AI models.
-Speak naturally and get spoken responses from gemma3:4b via Ollama.
+Starts a uvicorn server exposing the voice assistant as a WebRTC stream.
+The frontend (Vite + React) connects via the browser's RTCPeerConnection.
 
 Usage:
     uv run python main.py
     uv run python main.py --model gemma3:4b
-    uv run python main.py --list-devices
+    uv run python main.py --host 0.0.0.0 --port 7860
+    uv run python main.py --verbose
 """
 
 import argparse
-import asyncio
 import sys
 
+import uvicorn
 from loguru import logger
 
-from voice_assistant.io.audio import list_audio_devices
-from voice_assistant.core.pipeline import VoicePipeline
-from voice_assistant.io.ui import ConsoleUI
+from voice_assistant.server import _make_app
 
 
 def configure_logging(verbose: bool = False) -> None:
     """Configure loguru logging."""
-    logger.remove()  # Remove default handler
+    logger.remove()
 
     level = "DEBUG" if verbose else "INFO"
     logger.add(
@@ -37,9 +36,8 @@ def configure_logging(verbose: bool = False) -> None:
         colorize=True,
     )
 
-    # Also log to file for debugging
     logger.add(
-        "voice_assistant.log",
+        ".logs/app.log",
         level="DEBUG",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} | {message}",
         rotation="10 MB",
@@ -50,14 +48,15 @@ def configure_logging(verbose: bool = False) -> None:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Voice Assistant — Real-time voice chat with local AI",
+        description="Voice Assistant — WebRTC voice chat with local AI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  uv run python main.py                     # Start with defaults
-  uv run python main.py --model gemma3:4b   # Specify model
-  uv run python main.py --verbose           # Enable debug logging
-  uv run python main.py --list-devices      # Show audio devices
+  uv run python main.py                        # Start with defaults
+  uv run python main.py --model gemma3:4b      # Specify model
+  uv run python main.py --host 0.0.0.0         # Expose on all interfaces
+  uv run python main.py --port 8000            # Custom port
+  uv run python main.py --verbose              # Enable debug logging
         """,
     )
     parser.add_argument(
@@ -66,32 +65,27 @@ Examples:
         help="Ollama model name (default: gemma3:4b)",
     )
     parser.add_argument(
-        "--mic-device",
-        type=int,
-        default=None,
-        help="Microphone device index (default: system default)",
-    )
-    parser.add_argument(
-        "--speaker-device",
-        type=int,
-        default=None,
-        help="Speaker device index (default: system default)",
-    )
-    parser.add_argument(
         "--system-prompt",
         type=str,
         default=None,
         help="Custom system prompt for the assistant",
     )
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Enable verbose debug logging",
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind the server to (default: 127.0.0.1)",
     )
     parser.add_argument(
-        "--list-devices",
+        "--port",
+        type=int,
+        default=7860,
+        help="Port to bind the server to (default: 7860)",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
         action="store_true",
-        help="List available audio devices and exit",
+        help="Enable verbose debug logging",
     )
     return parser.parse_args()
 
@@ -99,43 +93,23 @@ Examples:
 def main() -> None:
     """Main entry point."""
     args = parse_args()
-    ui = ConsoleUI()
-
-    # Handle --list-devices
-    if args.list_devices:
-        ui.print_devices(list_audio_devices())
-        sys.exit(0)
-
     configure_logging(verbose=args.verbose)
-    ui.print_banner()
 
     logger.info(
-        "Starting Voice Assistant (model={model})",
+        "Starting Voice Assistant server (model={model}, {host}:{port})",
         model=args.model,
+        host=args.host,
+        port=args.port,
     )
 
-    # Create and run the pipeline
-    pipeline = VoicePipeline(
-        model=args.model,
-        mic_device=args.mic_device,
-        speaker_device=args.speaker_device,
-        system_prompt=args.system_prompt,
+    app = _make_app(model=args.model, system_prompt=args.system_prompt)
+
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="debug" if args.verbose else "info",
     )
-
-    try:
-        asyncio.run(_run_pipeline(pipeline))
-    except KeyboardInterrupt:
-        ui.show_shutdown()
-        logger.info("Shutdown complete")
-
-
-async def _run_pipeline(pipeline: VoicePipeline) -> None:
-    """Initialize and run the pipeline."""
-    if not await pipeline.initialize():
-        logger.error("Failed to initialize. Exiting.")
-        sys.exit(1)
-
-    await pipeline.run()
 
 
 if __name__ == "__main__":

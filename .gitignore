@@ -6,6 +6,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.logs
 
 # Virtual environment
 .venv/
@@ -30,6 +31,7 @@ Thumbs.db
 # Models (downloaded locally)
 models/
 
+docs/
 .agents/
 AGENT.md
 CONTEXT.md
