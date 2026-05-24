@@ -13,39 +13,15 @@ hears the first sentence while the LLM is still generating the rest.
 """
 
 import asyncio
-import re
 
 from loguru import logger
 
 from voice_assistant.audio import MicCapture, SpeakerPlayback, list_audio_devices
 from voice_assistant.conversation import Conversation
-from voice_assistant.llm import check_connection, generate_response
+from voice_assistant.llm import check_connection, generate_sentences
 from voice_assistant.stt import SpeechToText
 from voice_assistant.tts import TextToSpeech
 from voice_assistant.vad import VoiceActivityDetector
-
-
-# Sentence boundary pattern: split on .!? followed by space or end-of-string
-_SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
-
-
-def _split_sentences(text: str) -> tuple[list[str], str]:
-    """Split text into complete sentences and a remaining buffer.
-
-    Returns:
-        A tuple of (complete_sentences, remaining_buffer).
-        Complete sentences end with sentence-ending punctuation.
-        The remaining buffer is text that hasn't been terminated yet.
-    """
-    parts = _SENTENCE_END.split(text)
-    if len(parts) <= 1:
-        # No sentence boundary found — everything stays in buffer
-        return [], text
-
-    # All parts except the last are complete sentences
-    complete = parts[:-1]
-    remaining = parts[-1]
-    return complete, remaining
 
 
 class VoicePipeline:
@@ -153,7 +129,6 @@ class VoicePipeline:
         # --- Stream LLM response ---
         print("🧠 Thinking...")
 
-        token_buffer = ""
         full_response = []
 
         # Queues for the pipeline stages
@@ -170,25 +145,12 @@ class VoicePipeline:
 
         print("🔊 Assistant: ", end="", flush=True)
 
-        async for token in generate_response(
+        async for sentence in generate_sentences(
             self._conversation.get_messages(), model=self._model
         ):
-            token_buffer += token
-            print(token, end="", flush=True)
-
-            # Check for sentence boundaries
-            sentences, token_buffer = _split_sentences(token_buffer)
-
-            for sentence in sentences:
-                sentence = sentence.strip()
-                if sentence:
-                    full_response.append(sentence)
-                    await tts_queue.put(sentence)
-
-        # Handle any remaining text in the buffer
-        if token_buffer.strip():
-            full_response.append(token_buffer.strip())
-            await tts_queue.put(token_buffer.strip())
+            full_response.append(sentence)
+            print(f"{sentence} ", end="", flush=True)
+            await tts_queue.put(sentence)
 
         print()  # Newline after streaming output
 
