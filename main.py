@@ -15,8 +15,9 @@ import sys
 
 from loguru import logger
 
-from voice_assistant.audio import list_audio_devices
-from voice_assistant.pipeline import VoicePipeline
+from voice_assistant.io.audio import list_audio_devices
+from voice_assistant.core.pipeline import VoicePipeline
+from voice_assistant.io.ui import ConsoleUI
 
 
 def configure_logging(verbose: bool = False) -> None:
@@ -95,35 +96,18 @@ Examples:
     return parser.parse_args()
 
 
-def print_banner() -> None:
-    """Print the startup banner."""
-    print(
-        """
-╔══════════════════════════════════════════════════╗
-║         🎙️  Voice Assistant v0.1.0  🎙️          ║
-║                                                  ║
-║  Real-time voice chat with local AI models       ║
-║  STT: faster-whisper (small) | LLM: Ollama       ║
-║  TTS: Kokoro | VAD: Silero                       ║
-║                                                  ║
-║  Press Ctrl+C to quit                            ║
-╚══════════════════════════════════════════════════╝
-"""
-    )
-
-
 def main() -> None:
     """Main entry point."""
     args = parse_args()
+    ui = ConsoleUI()
 
     # Handle --list-devices
     if args.list_devices:
-        print("Available audio devices:\n")
-        print(list_audio_devices())
+        ui.print_devices(list_audio_devices())
         sys.exit(0)
 
     configure_logging(verbose=args.verbose)
-    print_banner()
+    ui.print_banner()
 
     logger.info(
         "Starting Voice Assistant (model={model})",
@@ -141,7 +125,7 @@ def main() -> None:
     try:
         asyncio.run(_run_pipeline(pipeline))
     except KeyboardInterrupt:
-        print("\n\n👋 Shutting down gracefully...")
+        ui.show_shutdown()
         logger.info("Shutdown complete")
 
 
