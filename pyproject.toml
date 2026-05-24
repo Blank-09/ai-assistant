@@ -1,0 +1,29 @@
+[project]
+name = "ai-assistant"
+version = "0.1.0"
+description = "A real-time voice chat application powered by local AI models"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "faster-whisper",
+    "ollama",
+    "kokoro",
+    "sounddevice",
+    "silero-vad",
+    "numpy",
+    "soundfile",
+    "loguru",
+    "torch",
+    "torchaudio",
+]
+
+[project.scripts]
+voice-assistant = "main:main"
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchaudio = { index = "pytorch-cu124" }
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"

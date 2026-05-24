@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# uv
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Audio test files
+*.wav
+*.mp3
+
+# Models (downloaded locally)
+models/
+
+.agents/
+AGENT.md
+CONTEXT.md
+voice_assistant.log
