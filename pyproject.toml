@@ -5,18 +5,14 @@ description = "A real-time voice chat application powered by local AI models"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "faster-whisper",
     "ollama",
     "kokoro",
-    "fastrtc",
+    "fastrtc[stt]",
     "fastapi",
     "uvicorn",
     "numpy",
     "scipy",
-    "soundfile",
     "loguru",
-    "torch",
-    "torchaudio",
 ]
 
 [project.scripts]

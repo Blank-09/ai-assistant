@@ -108,7 +108,7 @@ class SessionHandler:
         else:
             samples = samples.astype(np.float32)
 
-        # Whisper requires 16 kHz input
+        # Moonshine requires 16 kHz input
         stt_samples = _resample(samples, sample_rate, 16_000)
 
         chunk_queue: queue.Queue = queue.Queue()
