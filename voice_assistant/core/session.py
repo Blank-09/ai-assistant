@@ -20,9 +20,11 @@ Sample rate note:
 import asyncio
 import queue
 import threading
+from math import gcd
 
 import numpy as np
 from loguru import logger
+from scipy.signal import resample_poly
 
 from voice_assistant.core.conversation import Conversation
 from voice_assistant.models.llm import generate_sentences
@@ -35,16 +37,10 @@ WEBRTC_SAMPLE_RATE = 48_000
 
 
 def _resample(audio: np.ndarray, src_rate: int, dst_rate: int) -> np.ndarray:
-    """Resample a float32 mono audio array from src_rate to dst_rate.
-
-    Uses linear interpolation — sufficient quality for voice, no extra deps.
-    """
     if src_rate == dst_rate:
         return audio
-    duration = len(audio) / src_rate
-    target_len = int(duration * dst_rate)
-    indices = np.linspace(0, len(audio) - 1, target_len)
-    return np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
+    g = gcd(src_rate, dst_rate)
+    return resample_poly(audio, dst_rate // g, src_rate // g).astype(np.float32)
 
 
 class SessionHandler:

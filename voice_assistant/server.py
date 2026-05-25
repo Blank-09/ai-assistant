@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastrtc import Stream, ReplyOnPause
+from fastrtc import AlgoOptions, ReplyOnPause, SileroVadOptions, Stream
 from loguru import logger
 
 from voice_assistant.core.session import SessionHandler
@@ -62,7 +62,21 @@ async def lifespan(app: FastAPI):
         system_prompt=_system_prompt,
     )
     stream = Stream(
-        handler=ReplyOnPause(handler),
+        handler=ReplyOnPause(
+            handler,
+            algo_options=AlgoOptions(
+                audio_chunk_duration=0.6,
+                started_talking_threshold=0.2,
+                # Default 0.1 fires on brief mid-sentence pauses (breath, hesitation).
+                # 0.02 requires the 0.6s chunk to be almost entirely silent.
+                speech_threshold=0.02,
+            ),
+            model_options=SileroVadOptions(
+                # Higher probability threshold → fewer acoustic dips classified as silence.
+                threshold=0.6,
+                min_silence_duration_ms=500,
+            ),
+        ),
         modality="audio",
         mode="send-receive",
     )

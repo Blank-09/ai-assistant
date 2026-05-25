@@ -12,6 +12,7 @@ dependencies = [
     "fastapi",
     "uvicorn",
     "numpy",
+    "scipy",
     "soundfile",
     "loguru",
     "torch",
